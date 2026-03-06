@@ -1,43 +1,44 @@
 import { NextResponse } from 'next/server';
+import type { NextApiRequest } from 'next';
 
-interface Tip {
-  id: string;
-  title: string;
-  description: string;
+interface AuthedRequest extends NextApiRequest {
+  user?: {
+    uid: string;
+  };
 }
 
-const tips: Tip[] = [
+const troubleshootingTips = [
   {
-    id: '1',
-    title: 'Common Build Issues',
-    description: 'Verify your Next.js setup by checking for common build issues like missing dependencies or incorrect configurations in next.config.js.',
+    id: 1,
+    title: 'Check Your Environment Variables',
+    description: 'Ensure all necessary environment variables are defined in your .env file and correctly referenced in your code.',
   },
   {
-    id: '2',
-    title: 'Hot Reloading Problems',
-    description: 'If you experience issues with hot reloading, try refreshing the browser manually or restarting the development server.',
+    id: 2,
+    title: 'Review Your Build Logs',
+    description: 'Look at the build logs to identify any specific errors during the build process. These logs can provide insights into what went wrong.',
   },
   {
-    id: '3',
-    title: 'API Route Errors',
-    description: 'Ensure your API routes are set up correctly. Check for typos in the endpoints and ensure they are following the correct structure.',
+    id: 3,
+    title: 'Clear Your Cache',
+    description: 'Sometimes, issues can arise from stale cached data. Try clearing your browser cache or rebuilding your project.',
   },
   {
-    id: '4',
-    title: 'Performance Optimization',
-    description: 'Utilize Next.js built-in performance optimization features like Image Optimization and Static Generation to enhance your app.',
+    id: 4,
+    title: 'Check API Endpoints',
+    description: 'Verify that all your API endpoints are correctly configured and responding as expected.',
   },
   {
-    id: '5',
-    title: 'Version Compatibility',
-    description: 'Always check the compatibility of your dependencies with the Next.js version you are using to avoid unexpected issues.',
+    id: 5,
+    title: 'Consult Next.js Documentation',
+    description: 'Refer to the official Next.js documentation for common issues and best practices.',
   },
 ];
 
-export async function GET() {
+export async function GET(req: AuthedRequest) {
   try {
-    return NextResponse.json(tips);
+    return NextResponse.json(troubleshootingTips);
   } catch (err) {
-    return NextResponse.error(new Error(err instanceof Error ? err.message : String(err)));
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }
