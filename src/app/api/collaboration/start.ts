@@ -1,31 +1,44 @@
-import { NextResponse } from 'next/server';
+import { NextApiRequest, NextApiResponse } from 'next';
+import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
-import { initializeApp } from 'firebase-admin/app';
-import { AuthedRequest } from '@/types/AuthedRequest'; // adjust the import path as necessary
 
-initializeApp({
-  credential: admin.credential.applicationDefault(), // Ensure your Firebase credentials are set up correctly in your environment
-});
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+}
 
-export async function POST(req: Request) {
-  const { userId, collaborationData } = await req.json();
+interface AuthedRequest extends NextApiRequest {
+  uid?: string;
+}
 
-  if (!userId || !collaborationData) {
-    return NextResponse.json({ message: 'Invalid input.' }, { status: 400 });
+const collaborations = new Map<string, Array<string>>(); // In-memory store for active collaborations
+
+export default async function handler(req: AuthedRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  try {
-    const auth = getAuth();
-    const user = await auth.getUser(userId);
+  const { userId } = req.body;
 
-    if (!user) {
-      return NextResponse.json({ message: 'User not found.' }, { status: 404 });
+  try {
+    // Get the authenticated user's ID
+    if (!req.uid) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // Logic to start collaboration, e.g., saving it to Firestore
+    // Start or join a collaboration session
+    if (!collaborations.has(userId)) {
+      collaborations.set(userId, []);
+    }
+    
+    const participants = collaborations.get(userId)!;
+    if (!participants.includes(req.uid)) {
+      participants.push(req.uid);
+    }
 
-    return NextResponse.json({ message: 'Collaboration started successfully.' }, { status: 201 });
+    return res.status(200).json({ message: 'Collaboration started', participants });
   } catch (err) {
-    return NextResponse.json({ message: err instanceof Error ? err.message : String(err) }, { status: 500 });
+    return res.status(500).json({ message: err instanceof Error ? err.message : String(err) });
   }
 }
