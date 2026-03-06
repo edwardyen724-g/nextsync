@@ -1,37 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
-import { initializeApp, applicationDefault } from 'firebase-admin/app';
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+  });
+}
 
 interface AuthedRequest extends NextApiRequest {
   user?: { uid: string };
 }
 
-initializeApp({ credential: applicationDefault() });
-
-const checkDocumentation = async (req: AuthedRequest, res: NextApiResponse) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+export default async function checkDocumentation(req: AuthedRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { documentationId } = req.body;
-
-    if (!documentationId) {
-      return res.status(400).json({ message: 'Documentation ID is required.' });
-    }
-
-    const docRef = admin.firestore().collection('documentation').doc(documentationId);
-    const doc = await docRef.get();
-
-    if (!doc.exists) {
-      return res.status(404).json({ message: 'Documentation not found.' });
-    }
-
-    const data = doc.data();
-    return res.status(200).json(data);
+    // Simulating documentation check logic
+    const documentationStatus = await getDocumentationStatus(req.query.docId as string);
+    res.status(200).json({ status: documentationStatus });
   } catch (err) {
-    return res.status(500).json({ message: err instanceof Error ? err.message : String(err) });
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
-};
+}
 
-export default checkDocumentation;
+async function getDocumentationStatus(docId: string): Promise<string> {
+  // This is a placeholder logic for fetching documentation status
+  // You would implement actual logic to check the documentation from your data source
+  return `Documentation for ${docId} is up to date.`;
+}
