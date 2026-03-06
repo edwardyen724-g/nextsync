@@ -1,28 +1,43 @@
-import { NextResponse } from 'next/server';
-import { admin } from '@/lib/firebaseAdmin'; // import your firebase admin instance
+import { NextApiRequest, NextApiResponse } from 'next';
+import { initializeApp, applicationDefault, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 import { z } from 'zod';
 
-export interface Feedback {
-  userId: string;
-  message: string;
-  rating: number;
+const firebaseConfig = {
+  credential: applicationDefault(),
+};
+
+initializeApp(firebaseConfig);
+const db = getFirestore();
+
+interface FeedbackRequest extends NextApiRequest {
+  body: {
+    name: string;
+    email: string;
+    message: string;
+  };
 }
 
 const feedbackSchema = z.object({
-  userId: z.string(),
-  message: z.string().min(1).max(500),
-  rating: z.number().min(1).max(5),
+  name: z.string().nonempty(),
+  email: z.string().email(),
+  message: z.string().nonempty(),
 });
 
-export async function POST(req: Request) {
+export default async function handler(req: FeedbackRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
   try {
-    const body = await req.json();
-    const parsed = feedbackSchema.parse(body);
+    const parsedBody = feedbackSchema.parse(req.body);
 
-    await admin.firestore().collection('feedbacks').add(parsed);
+    const feedbackRef = db.collection('feedback').doc();
+    await feedbackRef.set(parsedBody);
 
-    return NextResponse.json({ status: 'success', message: 'Feedback submitted successfully.' });
+    return res.status(200).json({ message: 'Feedback submitted successfully' });
   } catch (err) {
-    return NextResponse.json({ status: 'error', message: err instanceof Error ? err.message : String(err) }, { status: 400 });
+    console.error('Error submitting feedback:', err);
+    return res.status(500).json({ message: err instanceof Error ? err.message : String(err) });
   }
 }
