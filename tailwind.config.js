@@ -1,27 +1,22 @@
-const tailwindcss = require('tailwindcss');
+const colors = require('tailwindcss/colors');
 
 module.exports = {
   content: [
-    './app/**/*.{js,ts,jsx,tsx}', 
-    './components/**/*.{js,ts,jsx,tsx}', 
-    './pages/**/*.{js,ts,jsx,tsx}'
+    "./src/app/**/*.{js,ts,jsx,tsx}",
+    "./src/components/**/*.{js,ts,jsx,tsx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        primary: '#3B82F6', // Tailwind blue-600
-        secondary: '#FBBF24', // Tailwind yellow-400
-        accent: '#F43F5E', // Tailwind rose-500
+        sky: colors.sky,
+        teal: colors.teal,
+        emerald: colors.emerald,
       },
-      spacing: {
-        128: '32rem',
-        144: '36rem',
+      fontFamily: {
+        sans: ['Roboto', 'system-ui', 'sans-serif'],
       },
     },
   },
-  plugins: [
-    tailwindcss,
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-  ],
+  plugins: [],
 };
