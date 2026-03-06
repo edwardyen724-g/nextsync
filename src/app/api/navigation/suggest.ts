@@ -1,41 +1,47 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { initializeApp, applicationDefault, cert } from 'firebase-admin/app';
+import { NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp, applicationDefault, cert } from 'firebase-admin/app';
+import { z } from 'zod';
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string);
-
-initializeApp({
-  credential: cert(serviceAccount),
+const app = initializeApp({
+  credential: applicationDefault(),
 });
 
-const db = getFirestore();
+const db = getFirestore(app);
 
-interface AuthedRequest extends NextApiRequest {
-  user?: { uid: string };
+const requestSchema = z.object({
+  userId: z.string().nonempty(),
+  context: z.object({
+    topic: z.string().nonempty(),
+    issue: z.string().optional(),
+  }),
+});
+
+export async function POST(request: Request) {
+  try {
+    const { userId, context } = requestSchema.parse(await request.json());
+    
+    const suggestions = await getSuggestions(userId, context);
+    
+    return NextResponse.json({ suggestions });
+  } catch (err) {
+    return NextResponse.error(
+      new Error(err instanceof Error ? err.message : String(err))
+    );
+  }
 }
 
-export default async function suggest(req: AuthedRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
+async function getSuggestions(userId: string, context: { topic: string; issue?: string }) {
+  const suggestions: string[] = [];
+  
+  // Example logic to fetch suggestions based on user context.
+  const snapshot = await db.collection('suggestions')
+    .where('topic', '==', context.topic)
+    .get();
 
-  try {
-    const { feature } = req.body;
+  snapshot.forEach(doc => {
+    suggestions.push(doc.data().suggestion);
+  });
 
-    if (!feature) {
-      return res.status(400).json({ message: 'Feature is required' });
-    }
-
-    const suggestionRef = db.collection('navigationSuggestions').doc();
-    await suggestionRef.set({
-      feature,
-      uid: req.user?.uid,
-      timestamp: new Date(),
-    });
-
-    return res.status(201).json({ message: 'Suggestion added successfully' });
-    
-  } catch (err) {
-    return res.status(500).json({ message: err instanceof Error ? err.message : String(err) });
-  }
+  return suggestions;
 }
