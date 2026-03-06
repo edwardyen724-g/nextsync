@@ -1,44 +1,29 @@
-import { firestore } from 'firebase-admin';
-import { initializeApp, applicationDefault, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
+import { Auth, UserCredential } from "firebase/auth";
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '{}');
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
 
-initializeApp({
-  credential: cert(serviceAccount),
-});
+const firebaseApp = initializeApp(firebaseConfig);
+const auth: Auth = getAuth(firebaseApp);
 
-const db = getFirestore();
-
-export const addDocument = async (collection: string, data: Record<string, any>): Promise<void> => {
+export const signInWithEmail = async (email: string, password: string): Promise<UserCredential | string> => {
   try {
-    await db.collection(collection).add(data);
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    return userCredential;
   } catch (err) {
-    throw new Error(`Failed to add document: ${err instanceof Error ? err.message : String(err)}`);
+    return err instanceof Error ? err.message : String(err);
   }
 };
 
-export const getDocument = async (collection: string, id: string): Promise<Record<string, any> | null> => {
-  try {
-    const doc = await db.collection(collection).doc(id).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } : null;
-  } catch (err) {
-    throw new Error(`Failed to get document: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-export const updateDocument = async (collection: string, id: string, data: Record<string, any>): Promise<void> => {
-  try {
-    await db.collection(collection).doc(id).update(data);
-  } catch (err) {
-    throw new Error(`Failed to update document: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-export const deleteDocument = async (collection: string, id: string): Promise<void> => {
-  try {
-    await db.collection(collection).doc(id).delete();
-  } catch (err) {
-    throw new Error(`Failed to delete document: ${err instanceof Error ? err.message : String(err)}`);
-  }
+export const formatErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error);
 };
